@@ -20,6 +20,7 @@ from homeassistant.util import color
 from homeassistant.components.light import (
     LightEntity,
     ColorMode,
+    LightEntityFeature,
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
@@ -252,7 +253,6 @@ class MiioEntity(ToggleEntity):
             'hardware_version': self._miio_info.hardware_version,
             'entity_class': self.__class__.__name__,
         }
-        self._supported_features = 0
         self._props = ['power']
         self._success_result = ['ok']
         self._deprecated_device_state_attributes_reported = True
@@ -281,10 +281,6 @@ class MiioEntity(ToggleEntity):
     @property
     def device_state_attributes(self):
         return self._state_attrs
-
-    @property
-    def supported_features(self):
-        return self._supported_features
 
     @property
     def device_info(self):
@@ -426,6 +422,8 @@ class YeelightEntity(MiioEntity, LightEntity):
         super().__init__(name, self._device)
         self._unique_id = f'{self._miio_info.model}-{self._miio_info.mac_address}-light'
 
+        self._supported_features = LightEntityFeature(0)
+
         self._supported_color_modes = set()
         self._supported_color_modes.add(ColorMode.BRIGHTNESS)
         self._supported_color_modes.add(ColorMode.COLOR_TEMP)
@@ -497,6 +495,10 @@ class YeelightEntity(MiioEntity, LightEntity):
     @property
     def supported_color_modes(self):
         return self._supported_color_modes
+    
+    @property
+    def supported_features(self):
+        return self._supported_features
 
     async def async_update(self):
         await super().async_update()
@@ -622,6 +624,10 @@ class BathHeaterEntity(MiioEntity, FanEntity):
     @property
     def mode(self):
         return self._mode
+    
+    @property
+    def supported_features(self):
+        return self._supported_features
 
     async def async_update(self):
         if self._parent and self._parent.available:
