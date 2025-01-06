@@ -436,7 +436,7 @@ class YeelightEntity(MiioEntity, LightEntity):
         self._props = ['power', 'nl_br', 'delayoff']
         if ColorMode.BRIGHTNESS in self.supported_color_modes:
             self._props.append('bright')
-        if ColorMode.COLOR_TEMP in self.supported_features:
+        if ColorMode.COLOR_TEMP in self.supported_color_modes:
             self._props.append('ct')
 
         self._state_attrs.update({'entity_class': self.__class__.__name__})
@@ -504,7 +504,7 @@ class YeelightEntity(MiioEntity, LightEntity):
             attrs = self._state_attrs
             if ColorMode.BRIGHTNESS in self.supported_color_modes and 'bright' in attrs:
                 self._brightness = ceil(255 / 100 * int(attrs.get('bright') or 0))
-            if ColorMode.COLOR_TEMP in self.supported_features and 'ct' in attrs:
+            if ColorMode.COLOR_TEMP in self.supported_color_modes and 'ct' in attrs:
                 self._color_temp = int(attrs.get('ct') or 0)
             if 'delayoff' in attrs:
                 self._delay_off = int(attrs.get('delayoff') or 0)
@@ -515,7 +515,7 @@ class YeelightEntity(MiioEntity, LightEntity):
             if result:
                 self._state = True
 
-        if ColorMode.COLOR_TEMP in self.supported_features and ATTR_COLOR_TEMP_KELVIN in kwargs:
+        if ColorMode.COLOR_TEMP in self.supported_color_modes and ATTR_COLOR_TEMP_KELVIN in kwargs:
             kelvin = kwargs[ATTR_COLOR_TEMP_KELVIN]
             mired = color.color_temperature_kelvin_to_mired(kelvin)
             color_temp = self.translate_mired(mired)
@@ -540,7 +540,7 @@ class YeelightEntity(MiioEntity, LightEntity):
             if result:
                 self._brightness = brightness
 
-        if ColorMode.HS in self.supported_features and ATTR_HS_COLOR in kwargs:
+        if ColorMode.HS in self.supported_color_modes and ATTR_HS_COLOR in kwargs:
             rgb = color.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
             _LOGGER.debug('Setting light: %s color: %s', self.name, rgb)
             result = await self._try_command(
