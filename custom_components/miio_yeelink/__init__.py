@@ -7,7 +7,7 @@ from functools import partial
 import voluptuous as vol
 
 from homeassistant import core, config_entries
-from homeassistant.const import *
+from homeassistant.const import CONF_HOST, CONF_TOKEN, CONF_NAME, CONF_MODE, ATTR_ENTITY_ID
 from homeassistant.core_config import DATA_CUSTOMIZE
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.entity import ToggleEntity
