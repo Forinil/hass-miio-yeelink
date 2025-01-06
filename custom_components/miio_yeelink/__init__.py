@@ -19,11 +19,9 @@ from homeassistant.util import color
 
 from homeassistant.components.light import (
     LightEntity,
-    SUPPORT_BRIGHTNESS,
-    SUPPORT_COLOR_TEMP,
-    SUPPORT_COLOR,
+    ColorMode,
     ATTR_BRIGHTNESS,
-    ATTR_COLOR_TEMP,
+    ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
 )
 from homeassistant.components.fan import (
@@ -417,6 +415,7 @@ class MiotEntity(MiioEntity):
 
 
 class YeelightEntity(MiioEntity, LightEntity):
+
     def __init__(self, config):
         name = config[CONF_NAME]
         host = config[CONF_HOST]
@@ -427,14 +426,17 @@ class YeelightEntity(MiioEntity, LightEntity):
         super().__init__(name, self._device)
         self._unique_id = f'{self._miio_info.model}-{self._miio_info.mac_address}-light'
 
-        self._supported_features = SUPPORT_BRIGHTNESS | SUPPORT_COLOR_TEMP
+        self._supported_color_modes = set()
+        self._supported_color_modes.add(ColorMode.BRIGHTNESS)
+        self._supported_color_modes.add(ColorMode.COLOR_TEMP)
         if self._model.find('bhf_light') >= 0 and self._model not in ['yeelink.bhf_light.v1']:
-            self._supported_features = SUPPORT_BRIGHTNESS
+            self._supported_color_modes = set()
+            self._supported_color_modes.add(ColorMode.BRIGHTNESS)
 
         self._props = ['power', 'nl_br', 'delayoff']
-        if self.supported_features & SUPPORT_BRIGHTNESS:
+        if ColorMode.BRIGHTNESS in self.supported_color_modes:
             self._props.append('bright')
-        if self.supported_features & SUPPORT_COLOR_TEMP:
+        if ColorMode.COLOR_TEMP in self.supported_features:
             self._props.append('ct')
 
         self._state_attrs.update({'entity_class': self.__class__.__name__})
@@ -446,14 +448,14 @@ class YeelightEntity(MiioEntity, LightEntity):
     async def async_added_to_hass(self):
         cfg = self.custom_config() or {}
         if cfg.get('support_color') or self._model.find('color') > 0:
-            self._supported_features |= SUPPORT_COLOR
+            self._supported_color_modes.add(ColorMode.HS)
             self._props.append('rgb')
         if cfg.get('support_brightness'):
-            self._supported_features |= SUPPORT_BRIGHTNESS
+            self._supported_color_modes.add(ColorMode.BRIGHTNESS)
             if 'bright' not in self._props:
                 self._props.append('bright')
         if cfg.get('support_color_temp'):
-            self._supported_features |= SUPPORT_COLOR_TEMP
+            self._supported_color_modes.add(ColorMode.COLOR_TEMP)
             if 'ct' not in self._props:
                 self._props.append('ct')
 
@@ -491,14 +493,18 @@ class YeelightEntity(MiioEntity, LightEntity):
     @property
     def delay_off(self):
         return self._delay_off
+    
+    @property
+    def supported_color_modes(self):
+        return self._supported_color_modes
 
     async def async_update(self):
         await super().async_update()
         if self._available:
             attrs = self._state_attrs
-            if self.supported_features & SUPPORT_BRIGHTNESS and 'bright' in attrs:
+            if ColorMode.BRIGHTNESS in self.supported_color_modes and 'bright' in attrs:
                 self._brightness = ceil(255 / 100 * int(attrs.get('bright') or 0))
-            if self.supported_features & SUPPORT_COLOR_TEMP and 'ct' in attrs:
+            if ColorMode.COLOR_TEMP in self.supported_features and 'ct' in attrs:
                 self._color_temp = int(attrs.get('ct') or 0)
             if 'delayoff' in attrs:
                 self._delay_off = int(attrs.get('delayoff') or 0)
@@ -509,8 +515,9 @@ class YeelightEntity(MiioEntity, LightEntity):
             if result:
                 self._state = True
 
-        if self.supported_features & SUPPORT_COLOR_TEMP and ATTR_COLOR_TEMP in kwargs:
-            mired = kwargs[ATTR_COLOR_TEMP]
+        if ColorMode.COLOR_TEMP in self.supported_features and ATTR_COLOR_TEMP_KELVIN in kwargs:
+            kelvin = kwargs[ATTR_COLOR_TEMP_KELVIN]
+            mired = color.color_temperature_kelvin_to_mired(kelvin)
             color_temp = self.translate_mired(mired)
             _LOGGER.debug('Setting color temperature: %s mireds, %s ct', mired, color_temp)
             result = await self._try_command(
@@ -521,7 +528,7 @@ class YeelightEntity(MiioEntity, LightEntity):
             if result:
                 self._color_temp = color_temp
 
-        if self.supported_features & SUPPORT_BRIGHTNESS and ATTR_BRIGHTNESS in kwargs:
+        if ColorMode.BRIGHTNESS in self.supported_color_modes and ATTR_BRIGHTNESS in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS]
             percent_brightness = ceil(100 * brightness / 255)
             _LOGGER.debug('Setting brightness: %s %s%%', brightness, percent_brightness)
@@ -533,7 +540,7 @@ class YeelightEntity(MiioEntity, LightEntity):
             if result:
                 self._brightness = brightness
 
-        if self.supported_features & SUPPORT_COLOR and ATTR_HS_COLOR in kwargs:
+        if ColorMode.HS in self.supported_features and ATTR_HS_COLOR in kwargs:
             rgb = color.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
             _LOGGER.debug('Setting light: %s color: %s', self.name, rgb)
             result = await self._try_command(
@@ -972,7 +979,9 @@ class MiotLightEntity(MiotEntity, LightEntity):
         self._device = MiotDevice(ip=host, token=token, mapping=self.mapping)
         super().__init__(name, self._device)
 
-        self._supported_features = SUPPORT_BRIGHTNESS | SUPPORT_COLOR_TEMP
+        self._supported_color_modes = set()
+        self._supported_color_modes.add(ColorMode.BRIGHTNESS)
+        self._supported_color_modes.add(ColorMode.COLOR_TEMP)
         self._state_attrs.update({'entity_class': self.__class__.__name__})
         self._brightness = None
         self._color_temp = None
@@ -1002,28 +1011,33 @@ class MiotLightEntity(MiotEntity, LightEntity):
     @property
     def delay_off(self):
         return self._delay_off
+    
+    @property
+    def supported_color_modes(self):
+        return self._supported_color_modes
 
     async def async_update(self):
         await super().async_update()
         if self._available:
             attrs = self._state_attrs
-            if self.supported_features & SUPPORT_BRIGHTNESS and 'bright' in attrs:
+            if ColorMode.BRIGHTNESS in self.supported_color_modes and 'bright' in attrs:
                 self._brightness = ceil(255 / 100 * int(attrs.get('bright', 0)))
-            if self.supported_features & SUPPORT_COLOR_TEMP and 'ct' in attrs:
+            if ColorMode.COLOR_TEMP in self.supported_color_modes and 'ct' in attrs:
                 self._color_temp = int(attrs.get('ct', 0))
             if 'delayoff' in attrs:
                 self._delay_off = int(attrs.get('delayoff', 0))
 
     async def async_turn_on(self, **kwargs):
-        if self.supported_features & SUPPORT_COLOR_TEMP and ATTR_COLOR_TEMP in kwargs:
-            mired = kwargs[ATTR_COLOR_TEMP]
+        if ColorMode.COLOR_TEMP in self.supported_color_modes and ATTR_COLOR_TEMP_KELVIN in kwargs:
+            kelvin = kwargs[ATTR_COLOR_TEMP_KELVIN]
+            mired = color.color_temperature_kelvin_to_mired(kelvin)
             color_temp = self.translate_mired(mired)
             _LOGGER.debug('Setting color temperature: %s mireds, %s ct', mired, color_temp)
             result = await self.async_set_property('ct', color_temp)
             if result:
                 self._color_temp = color_temp
 
-        if self.supported_features & SUPPORT_BRIGHTNESS and ATTR_BRIGHTNESS in kwargs:
+        if ColorMode.BRIGHTNESS in self.supported_color_modes and ATTR_BRIGHTNESS in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS]
             percent_brightness = ceil(100 * brightness / 255)
             _LOGGER.debug('Setting brightness: %s %s%%', brightness, percent_brightness)
