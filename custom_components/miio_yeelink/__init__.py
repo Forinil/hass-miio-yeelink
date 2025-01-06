@@ -152,8 +152,7 @@ async def async_setup_entry(hass: core.HomeAssistant, config_entry: config_entri
         'plats': plats,
         'miio': info,
     })
-    for plat in plats:
-        hass.async_create_task(hass.config_entries.async_forward_entry_setup(config_entry, plat))
+    hass.async_create_task(hass.config_entries.async_forward_entry_setups(config_entry, plats))
     return True
 
 
