@@ -1,5 +1,7 @@
 # Xiaomi Miio For Yeelink devices
 
+Forked from [https://github.com/al-one/hass-miio-yeelink](al-one/hass-miio-yeelink)
+
 ## Tested Devices
 
 - MJXDD02YL | yeelink.light.ceiling21
