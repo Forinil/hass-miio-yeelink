@@ -3,7 +3,7 @@ import logging
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import *
+from homeassistant.const import CONF_HOST, CONF_TOKEN, CONF_NAME, CONF_MODE
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import format_mac
 

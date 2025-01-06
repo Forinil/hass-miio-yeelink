@@ -3,7 +3,7 @@ import logging
 import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
-from homeassistant.const import *
+from homeassistant.const import CONF_HOST
 
 from . import (
     YeelightEntity,

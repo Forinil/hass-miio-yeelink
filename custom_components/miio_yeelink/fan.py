@@ -2,7 +2,7 @@
 import logging
 import voluptuous as vol
 
-from homeassistant.const import *
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_MODE
 
 from . import (
     BathHeaterEntity,
